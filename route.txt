@@ -1,0 +1,22 @@
+         rest("").get("check").to("direct:testEnrich");
+
+         from("direct:testEnrich")
+                 .removeHeader(Exchange.HTTP_URI)
+                 .doTry()
+                    .to("http://localhost:5373")
+                    .log("Server response: ${body}")
+                    .multicast(new MyAggregationStrategy()).parallelProcessing()
+                    .to("http://google.com")
+                    .to("http://localhost:5373/api").end()
+                    .process(exchange -> {
+                        log.info("Inside aggregator process");
+                    })
+                 .endDoTry()
+                 .doCatch(Exception.class)
+                    .log("Exception Caught")
+                    .process(exchange -> {
+                        log.info("Inside exception handler process");
+                    })
+                 .doFinally()
+                     .log("Inside finally block")
+                 .end();
